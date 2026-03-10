@@ -1,3 +1,18 @@
+# Self-added
+.DS_Store
+__pycache__/
+*.pyc
+mlruns/
+.venv/
+.csv
+Data/
+Documents/
+Presentation/
+.conda/
+.vscode/
+Experiment/
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
