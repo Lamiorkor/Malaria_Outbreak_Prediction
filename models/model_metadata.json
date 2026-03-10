@@ -1,0 +1,54 @@
+{
+  "best_model": "LogisticRegression",
+  "model_name": "MalariaOutbreakPredictor",
+  "model_version": "6",
+  "stage": "Staging",
+  "threshold": 0.4,
+  "feature_cols": [
+    "Malaria_Incidence",
+    "Precipitation_mm",
+    "Pop_Density",
+    "GDP_per_Capita",
+    "Temp_Annual_Mean_C",
+    "Temp_GrowingSeason_Mean_C",
+    "Malaria_Lag1",
+    "Malaria_Lag2",
+    "Malaria_Lag3",
+    "Temp_Lag1",
+    "Precip_Lag1",
+    "GDP_Lag1",
+    "Malaria_Roll3",
+    "Temp_Roll3",
+    "Precip_Roll3",
+    "Malaria_YoY_Change",
+    "Temp_Precip_Interaction",
+    "Temp_Squared",
+    "Climate_Risk_Index",
+    "Vulnerability_Index",
+    "Log_GDP",
+    "Log_Malaria_Incidence"
+  ],
+  "val_aucs": {
+    "LogisticRegression": 1.0,
+    "XGBoost": 0.8601
+  },
+  "test_metrics": {
+    "LogisticRegression": {
+      "test_auc_roc": 0.9408,
+      "test_f1": 0.7769,
+      "test_precision": 0.6351,
+      "test_recall": 1.0,
+      "test_avg_precision": 0.7039
+    },
+    "XGBoost": {
+      "test_auc_roc": 0.8527,
+      "test_f1": 0.3966,
+      "test_precision": 0.2474,
+      "test_recall": 1.0,
+      "test_avg_precision": 0.456
+    }
+  },
+  "train_years": "2000-2016",
+  "val_years": "2017-2019",
+  "test_years": "2020-2022"
+}
