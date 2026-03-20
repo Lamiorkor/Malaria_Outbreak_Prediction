@@ -1,5 +1,5 @@
 # Malaria Outbreak Prediction System
-A paired Machine Learning Ops project for the Artificial Intelligence class
+A paired Machine Learning Ops project for the FS26 Artificial Intelligence class at HSLU
 
 
 ## Overview
