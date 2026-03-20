@@ -24,7 +24,7 @@ To predict the probability of a malaria outbreak for a given country-year and tr
 
 ## Key Features
 
-* 🔬 Advanced feature engineering:
+* Advanced feature engineering:
 
   * Lag features (Malaria_Lag1–3)
   * Rolling averages (3-year windows)
