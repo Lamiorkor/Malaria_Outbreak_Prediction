@@ -211,7 +211,4 @@ Lucerne University of Applied Sciences and Arts (HSLU)
 MSc IT, Digitalisation & Sustainability
 Lucerne University of Applied Sciences and Arts (HSLU)
 
-I can now help you:
-
-* turn this into a **visual architecture diagram (very high marks)**
-* or create your **presentation slides (ready-to-present)**
+**Thank you :)**
