@@ -23,7 +23,10 @@ from typing import List, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from predict import PredictionPipeline
+try:
+    from .predict import PredictionPipeline
+except ImportError:
+    from predict import PredictionPipeline
 
 pipeline = None
 

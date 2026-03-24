@@ -35,7 +35,6 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.preprocessing import StandardScaler
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -52,7 +51,7 @@ MODEL_NAME = "MalariaOutbreakPredictor"
 THRESHOLD = 0.50
 TRAIN_YEARS = "2000-2016"
 VAL_YEARS = "2017-2019"
-TEST_YEARS = "2020-2021" 
+TEST_YEARS = "2020-2021"
 
 RANDOM_STATE = 42
 
@@ -94,34 +93,6 @@ def load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd
 
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-
-# def rebuild_scaler() -> StandardScaler:
-#     """
-#     Rebuild a fitted StandardScaler from scaler_params.csv.
-
-#     Expected columns in scaler_params.csv:
-#     - mean
-#     - std
-#     """
-#     scaler_path = FEATURE_STORE / "scaler_params.csv"
-#     if not scaler_path.exists():
-#         raise FileNotFoundError(f"Missing scaler parameters file: {scaler_path}")
-
-#     scaler_params = pd.read_csv(scaler_path)
-
-#     required_cols = {"mean", "std"}
-#     if not required_cols.issubset(set(scaler_params.columns)):
-#         raise ValueError(
-#             "scaler_params.csv must contain columns: 'mean' and 'std'"
-#         )
-
-#     scaler = StandardScaler()
-#     scaler.mean_ = scaler_params["mean"].to_numpy()
-#     scaler.scale_ = scaler_params["std"].to_numpy()
-#     scaler.var_ = scaler.scale_ ** 2
-#     scaler.n_features_in_ = len(scaler_params)
-
-#     return scaler
 
 def load_fitted_scaler():
     scaler_path = FEATURE_STORE / "scaler.pkl"

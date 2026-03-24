@@ -1,5 +1,5 @@
 """
-predict_pipeline.py
+predict.py
 ===================
 MLOps Prediction Pipeline — Malaria Outbreak Prediction
 
@@ -7,10 +7,10 @@ Loads the model currently in MLflow Staging and runs
 batch predictions on new country-year data.
 
 Usage:
-    python predict_pipeline.py --input new_data.csv --output predictions.csv
+    python predict.py --input new_data.csv --output predictions.csv
 
     # Or import as a module in FastAPI:
-    from predict_pipeline import PredictionPipeline
+    from predict import PredictionPipeline
     pipeline = PredictionPipeline()
     result   = pipeline.predict_single({...})
 """
@@ -27,9 +27,8 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 log = logging.getLogger(__name__)
 
-BASE_DIR = Path(os.getenv("BASE_DIR", Path(__file__).resolve().parents[2]))
-MODEL_DIR = BASE_DIR / "models"
-
+# BASE_DIR = Path(os.getenv("BASE_DIR", Path(__file__).resolve().parents[2]))
+MODEL_DIR = Path(os.getenv("MODEL_DIR", "/app/models"))
 
 class PredictionPipeline:
     def __init__(self):
@@ -115,14 +114,23 @@ class PredictionPipeline:
 
         df_in = pd.DataFrame([normalise(r) for r in all_rows])
 
-        required = [
-            "Country Name", "Country Code", "Year", "Malaria_Incidence",
-            "Precipitation_mm", "Pop_Density", "GDP_per_Capita",
-            "Temp_Annual_Mean_C", "Temp_GrowingSeason_Mean_C"
-        ]
-        for col in required:
+        defaults = {
+            "Country Name": "Unknown",
+            "Country Code": "UNK",
+            "Year": 0,
+            "Malaria_Incidence": 0.0,
+            "Precipitation_mm": 0.0,
+            "Pop_Density": 0.0,
+            "GDP_per_Capita": 0.0,
+            "Temp_Annual_Mean_C": 0.0,
+            "Temp_GrowingSeason_Mean_C": 0.0,
+        }
+
+        for col, default in defaults.items():
             if col not in df_in.columns:
-                df_in[col] = 0.0
+                df_in[col] = default
+            else:
+                df_in[col] = df_in[col].fillna(default)
 
         df_eng = self.engineer_features(df_in)
 
@@ -138,7 +146,7 @@ class PredictionPipeline:
         prob = float(self.model.predict_proba(X_scaled)[:, 1][0])
         alert = prob >= self.threshold
 
-        risk_level = "HIGH" if prob >= 0.70 else "MEDIUM" if prob >= 0.40 else "LOW"
+        risk_level = "HIGH" if prob >= 0.70 else "MEDIUM" if prob >= 0.50 else "LOW"
 
         return {
             "country": str(df_in.iloc[-1]["Country Name"]),
