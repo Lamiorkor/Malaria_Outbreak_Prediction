@@ -27,8 +27,8 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 log = logging.getLogger(__name__)
 
-# BASE_DIR = Path(os.getenv("BASE_DIR", Path(__file__).resolve().parents[2]))
-MODEL_DIR = Path(os.getenv("MODEL_DIR", "/app/models"))
+BASE_DIR = Path(__file__).resolve().parents[2]
+MODEL_DIR = Path(os.getenv("MODEL_DIR", str(BASE_DIR / "models")))
 
 class PredictionPipeline:
     def __init__(self):

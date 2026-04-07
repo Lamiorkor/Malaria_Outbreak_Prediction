@@ -15,21 +15,21 @@ import sys
 from datetime import datetime, UTC
 from pathlib import Path
 
-# ── Setup paths ──────────────────────────────────────────────────────────────
-BASE_DIR = Path(__file__).resolve().parents[2]
+from prefect import flow, task, get_run_logger
 
-# Allow import from webservices
+BASE_DIR = Path(__file__).resolve().parents[2]
 sys.path.append(str(BASE_DIR / "dockerisation_and_deployment" / "webservices"))
 
-from predict import PredictionPipeline  # noqa: E402
+from predict import PredictionPipeline 
 
 OUTPUT_DIR = BASE_DIR / "outputs"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# ── Step 1: Run training ─────────────────────────────────────────────────────
+@task(name="run_training")
 def run_training():
-    print("\n🚀 Running training pipeline...\n")
+    logger = get_run_logger()
+    logger.info("Starting yearly malaria model retraining.")
 
     result = subprocess.run(
         [sys.executable, str(BASE_DIR / "training_pipeline" / "train_pipeline.py")],
@@ -37,18 +37,21 @@ def run_training():
         text=True
     )
 
-    print(result.stdout)
+    if result.stdout:
+        logger.info(result.stdout)
 
     if result.returncode != 0:
-        print(result.stderr)
-        raise RuntimeError("Training failed")
+        if result.stderr:
+            logger.error(result.stderr)
+        raise RuntimeError("Training failed.")
 
-    print("\n✅ Training complete.\n")
+    logger.info("Training completed successfully.")
 
 
-# ── Step 2: Run prediction ───────────────────────────────────────────────────
+@task(name="run_prediction")
 def run_prediction():
-    print("🔮 Running prediction...\n")
+    logger = get_run_logger()
+    logger.info("Starting yearly batch prediction.")
 
     pipeline = PredictionPipeline()
 
@@ -99,21 +102,37 @@ def run_prediction():
         ]
     }
 
-    result = pipeline.predict_single(sample)
-    result["generated_at"] = datetime.now(UTC).isoformat()
+    prediction_result = pipeline.predict_single(sample)
 
-    output_file = OUTPUT_DIR / "scheduled_prediction.json"
+    run_time = datetime.now(UTC)
+    timestamp = run_time.strftime("%Y%m%d_%H%M%S")
+
+    output_payload = {
+        "generated_at": run_time.isoformat(),
+        "input": sample,
+        "prediction": prediction_result
+    }
+
+    output_file = OUTPUT_DIR / f"scheduled_prediction_{timestamp}.json"
 
     with open(output_file, "w") as f:
-        json.dump(result, f, indent=2)
+        json.dump(output_payload, f, indent=2)
 
-    print("✅ Prediction complete.\n")
-    print("📁 Saved to:", output_file)
-    print("\nResult:")
-    print(json.dumps(result, indent=2))
+    logger.info(f"Prediction completed successfully. Output saved to {output_file}")
+    logger.info(json.dumps(output_payload, indent=2))
+
+    return output_payload
 
 
-# ── Main ─────────────────────────────────────────────────────────────────────
-if __name__ == "__main__":
+@flow(name="malaria_yearly_train_and_batch_predict")
+def malaria_yearly_train_and_batch_predict():
+    logger = get_run_logger()
+    logger.info("Yearly malaria pipeline started.")
     run_training()
-    run_prediction()
+    prediction = run_prediction()
+    logger.info("Yearly malaria pipeline finished successfully.")
+    return prediction
+
+
+if __name__ == "__main__":
+    malaria_yearly_train_and_batch_predict()
