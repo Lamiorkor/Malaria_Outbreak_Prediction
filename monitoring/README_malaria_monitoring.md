@@ -1,7 +1,5 @@
 # Malaria Monitoring Pipeline
 
-This folder mirrors the lecturer's `05_monitoring` structure, but adapts it to the malaria outbreak project.
-
 ## Folder structure
 
 ```text
