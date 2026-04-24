@@ -92,9 +92,3 @@ FROM monitoring_metrics
 ORDER BY timestamp;
 ```
 
-## Important note for your presentation
-This monitoring demo is a historical backtesting setup:
-- the production-like batch uses later historical years
-- true labels are available from next year's incidence
-- this lets you show `generate_batch` and `calculate_metrics` live
-- in a real production system, ground-truth labels would usually arrive later
