@@ -7,7 +7,8 @@ COPY dockerisation_and_deployment/webservices/predict.py .
 COPY dockerisation_and_deployment/webservices/__init__.py .
 COPY models /app/models
 
-RUN pip install --no-cache-dir mlflow joblib numpy pandas scikit-learn fastapi uvicorn
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
 # ENV MLFLOW_TRACKING_URI=http://host.docker.internal:5001
 # ENV MLFLOW_REGISTRY_URI=http://host.docker.internal:5001

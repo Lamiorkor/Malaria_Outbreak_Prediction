@@ -41,8 +41,8 @@ from sklearn.metrics import (
 # Configuration
 # ──────────────────────────────────────────────────────────────────────────────
 FEATURE_STORE = Path(os.getenv("FEATURE_STORE", "data/feature_store"))
-MODEL_DIR = Path(os.getenv("MODEL_DIR", "./models"))
-MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI", "file:./mlruns")
+MODEL_DIR = Path(os.getenv("MODEL_DIR", "models"))
+MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI", "file:mlruns/")
 
 EXPERIMENT_NAME = "Malaria_Outbreak_Prediction"
 RUN_NAME = "LogisticRegression_Balanced_Final"
@@ -211,7 +211,7 @@ def log_to_mlflow(
 
         mlflow.sklearn.log_model(
             sk_model=model,
-            artifact_path="model",
+            name="model",
             signature=signature,
             registered_model_name=MODEL_NAME,
         )
