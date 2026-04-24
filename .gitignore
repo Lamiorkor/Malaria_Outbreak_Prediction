@@ -4,6 +4,7 @@ mlruns/
 # Data (raw + processed)
 data/
 *.csv
+*.db
 
 # Outputs / generated files
 outputs/
