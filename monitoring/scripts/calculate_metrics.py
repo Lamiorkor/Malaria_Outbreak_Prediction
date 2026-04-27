@@ -165,6 +165,50 @@ def main() -> None:
                     float(current["temp_annual_mean_c"].mean()),
                 ),
             )
+
+            for _, row in current.iterrows():
+                cur.execute(
+                    """
+                    INSERT INTO prediction_logs (
+                        batch_id,
+                        country,
+                        year,
+                        temperature_mean,
+                        precipitation_mm,
+                        gdp_per_capita,
+                        population_density,
+                        malaria_lag1,
+                        malaria_lag2,
+                        malaria_lag3,
+                        outbreak_probability,
+                        outbreak_prediction,
+                        model_name,
+                        model_version,
+                        request_timestamp,
+                        inference_latency_ms
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (batch_id, country, year) DO NOTHING
+                    """,
+                    (
+                       batch_id,
+                       row["country_name"],
+                       int(row["year"]),
+                       float(row["temp_annual_mean_c"]),
+                       float(row["precipitation_mm"]),
+                       float(row["gdp_per_capita"]),
+                       float(row["pop_density"]),
+                       row.get("malaria_lag1"),
+                       row.get("malaria_lag2"),
+                       row.get("malaria_lag3"),
+                       float(row["outbreak_probability"]),
+                       int(row["outbreak_prediction"]),
+                       "MalariaOutbreakPredictor",
+                       "v1",
+                       datetime.now(UTC),
+                       float(row["inference_latency_ms"]),
+                    ),
+                )
         conn.commit()
     finally:
         conn.close()

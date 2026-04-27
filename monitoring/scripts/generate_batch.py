@@ -129,6 +129,11 @@ def inject_synthetic_drift(df: pd.DataFrame, mode: str) -> pd.DataFrame:
         shifted["Precipitation_mm"] *= 1.10
         shifted["GDP_per_Capita"] *= 0.92
         shifted["Malaria_Incidence"] *= 1.08
+    elif mode == "extreme":
+        shifted["Temp_Annual_Mean_C"] += 2.5
+        shifted["Precipitation_mm"] *= 1.3
+        shifted["GDP_per_Capita"] *= 0.7
+        shifted["Malaria_Incidence"] *= 1.2
     else:
         raise ValueError(f"Unsupported drift mode: {mode}")
 
@@ -142,7 +147,7 @@ def main() -> None:
     parser.add_argument(
         "--drift-mode",
         type=str,
-        choices=["none", "climate", "economic", "mixed"],
+        choices=["none", "climate", "economic", "mixed", "extreme"],
         default="mixed",
         help="Synthetic drift scenario for the demo",
     )
@@ -161,11 +166,19 @@ def main() -> None:
     production_pool = inject_synthetic_drift(production_pool, args.drift_mode)
 
     eligible_rows = []
-    for country_name, country_df in production_pool.groupby("Country Name"):
-        country_df = country_df.sort_values("Year").reset_index(drop=True)
-        for _, row in country_df.iterrows():
-            if has_three_year_history(country_df, int(row["Year"])):
-                eligible_rows.append(row)
+
+    raw_sorted = raw.sort_values(["Country Name", "Year"]).reset_index(drop=True)
+
+    for _, row in production_pool.iterrows():
+        country_name = row["Country Name"]
+        current_year = int(row["Year"])
+
+        full_country_df = raw_sorted[
+            raw_sorted["Country Name"] == country_name
+        ].copy()
+
+        if has_three_year_history(full_country_df, current_year):
+            eligible_rows.append(row)
 
     eligible = pd.DataFrame(eligible_rows)
     if eligible.empty:
@@ -205,6 +218,9 @@ def main() -> None:
                 "precipitation_mm": record["precipitation_mm"],
                 "pop_density": record["pop_density"],
                 "gdp_per_capita": record["gdp_per_capita"],
+                "malaria_lag1": history[-1]["malaria_incidence"] if len(history) >= 1 else None,
+                "malaria_lag2": history[-2]["malaria_incidence"] if len(history) >= 2 else None,
+                "malaria_lag3": history[-3]["malaria_incidence"] if len(history) >= 3 else None,
                 "temp_annual_mean_c": record["temp_annual_mean_c"],
                 "temp_growing_season_mean_c": record["temp_growing_season_mean_c"],
                 "true_label": int(row["true_label"]),
