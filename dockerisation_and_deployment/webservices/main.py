@@ -35,6 +35,12 @@ def log_prediction_to_db(record: dict, result: dict, latency_ms: float, predicte
         conn = get_db_connection()
         cur = conn.cursor()
 
+        history = record.get("history") or []
+
+        malaria_lag1 = history[-1]["malaria_incidence"] if len(history) >= 1 else None
+        malaria_lag2 = history[-2]["malaria_incidence"] if len(history) >= 2 else None
+        malaria_lag3 = history[-3]["malaria_incidence"] if len(history) >= 3 else None
+
         cur.execute(
             """
             INSERT INTO prediction_logs (
@@ -60,18 +66,20 @@ def log_prediction_to_db(record: dict, result: dict, latency_ms: float, predicte
                 record.get("country_name"),
                 record.get("year"),
                 record.get("precipitation_mm"),
-                record.get("pop_density"),  # maps to population_density
+                record.get("pop_density"),
                 record.get("gdp_per_capita"),
-                record.get("temp_annual_mean_c"),  # maps to temperature_mean
-                None,  # malaria_lag1 (not directly available)
-                None,
-                None,
+                record.get("temp_annual_mean_c"),
+
+                malaria_lag1,
+                malaria_lag2,
+                malaria_lag3,
+
                 result.get("outbreak_probability"),
-                int(result.get("outbreak_alert")),  # boolean → int
+                int(result.get("outbreak_alert")),
                 result.get("model_name"),
-                "v1",  # or from metadata if you want
+                "v1",
                 latency_ms,
-                datetime.now(UTC),
+                predicted_at,  # use passed timestamp instead of new one
             ),
         )
 
@@ -136,7 +144,7 @@ async def predict(record: CountryRecord):
         record_dict = record.model_dump()
 
         start_time = time.time()
-        result = pipeline.predict_single(record_dict)
+        result = pipeline.predict_single(record_dict.copy())
         latency_ms = round((time.time() - start_time) * 1000, 2)
         predicted_at = datetime.now(UTC)
 
