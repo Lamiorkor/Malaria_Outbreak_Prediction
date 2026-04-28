@@ -143,7 +143,7 @@ def inject_synthetic_drift(df: pd.DataFrame, mode: str) -> pd.DataFrame:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--raw-path", type=str, default=None, help="Path to malaria_final_dataset.csv")
-    parser.add_argument("--batch-size", type=int, default=20, help="Number of rows to sample")
+    parser.add_argument("--batch-size", type=int, default=30, help="Number of rows to sample")
     parser.add_argument(
         "--drift-mode",
         type=str,

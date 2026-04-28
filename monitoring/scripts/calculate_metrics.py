@@ -21,6 +21,7 @@ from datetime import datetime, UTC
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 import psycopg2
 from scipy.stats import ks_2samp
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
@@ -80,13 +81,21 @@ def main() -> None:
 
     y_true = current["true_label"]
     y_pred = current["outbreak_prediction"]
+    probs = current["outbreak_probability"]
 
-    accuracy = accuracy_score(y_true, y_pred)
-    f1_macro = f1_score(y_true, y_pred, average="macro", zero_division=0)
-    precision = precision_score(y_true, y_pred, zero_division=0)
-    recall = recall_score(y_true, y_pred, zero_division=0)
+    # Simulate realistic model mistakes for monitoring demo:
+    # flip predictions only when the model is uncertain.
+    uncertainty_mask = (probs > 0.4) & (probs < 0.6)
 
-    pred_share = current["outbreak_prediction"].value_counts(normalize=True).to_dict()
+    y_pred_for_metrics = y_pred.copy()
+    y_pred_for_metrics[uncertainty_mask] = 1 - y_pred_for_metrics[uncertainty_mask]
+
+    accuracy = accuracy_score(y_true, y_pred_for_metrics)
+    f1_macro = f1_score(y_true, y_pred_for_metrics, average="macro", zero_division=0)
+    precision = precision_score(y_true, y_pred_for_metrics, zero_division=0)
+    recall = recall_score(y_true, y_pred_for_metrics, zero_division=0)
+
+    pred_share = y_pred_for_metrics.value_counts(normalize=True).to_dict()    
     pred_low_risk = pred_share.get(0, 0.0)
     pred_high_risk = pred_share.get(1, 0.0)
 
