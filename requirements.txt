@@ -1,9 +1,10 @@
 fastapi
 uvicorn
-scikit-learn
+scikit-learn==1.7.2
 pandas
 numpy
 joblib
 mlflow
 psycopg2-binary
 prefect
+pytest

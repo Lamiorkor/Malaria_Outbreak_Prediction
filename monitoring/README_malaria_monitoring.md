@@ -1,102 +1,179 @@
 # Malaria Monitoring Pipeline
 
-This folder mirrors the lecturer's `05_monitoring` structure, but adapts it to the malaria outbreak project.
+## 📌 Overview
 
-## Folder structure
+This module implements the monitoring component of the **Climate-Driven Disease Outbreak Prediction System**.
 
-```text
-05_monitoring/
-├── data/
-│   ├── reference.csv
-│   └── current_batches/
-├── scripts/
-│   ├── prepare_reference.py
-│   ├── generate_batch.py
-│   └── calculate_metrics.py
-├── docker-compose.yml
-└── README.md
+The goal is to track model performance over time and detect potential degradation due to:
+
+* Data drift (changes in input distribution)
+* Prediction drift
+* Model performance decay
+
+This ensures the system remains reliable in a real-world deployment setting.
+
+---
+
+## 🏗️ Monitoring Architecture
+
+The monitoring pipeline consists of:
+
+1. **Reference Dataset**
+
+   * Historical malaria data
+   * Used as baseline (ground truth approximation)
+
+2. **Current Batch Data**
+
+   * Simulated incoming data
+   * Generated using `generate_batch.py`
+
+3. **Metrics Calculation**
+
+   * Performance metrics (accuracy, precision, recall)
+   * Data drift metrics
+
+4. **Storage**
+
+   * Metrics stored in PostgreSQL
+
+5. **Visualization**
+
+   * Grafana dashboards for monitoring trends
+
+---
+
+## 📂 Project Structure
+
+```
+monitoring/
+│
+├── docker-compose.yaml        # Monitoring stack (Postgres, Grafana)
+├── README_malaria_monitoring.md
+├── ML_MonitoringPipeline.jpeg
+├── ML_Monitoring_Pipeline_Diagram.png
+│
+└── scripts/
+    ├── prepare_reference.py   # Create baseline dataset
+    ├── generate_batch.py      # Simulate incoming data
+    └── calculate_metrics.py   # Compute monitoring metrics
 ```
 
-## What each script does
+---
 
-- `prepare_reference.py`
-  - builds a baseline/reference dataset from historical malaria rows
-  - generates model predictions using your existing `PredictionPipeline`
-  - creates a proxy `true_label` for backtesting:
-    - outbreak next year = 1 if next year's incidence is at or above the chosen quantile threshold
+## ⚙️ Setup Instructions
 
-- `generate_batch.py`
-  - samples a new batch from later years
-  - optionally injects synthetic drift (`none`, `climate`, `economic`, `mixed`)
-  - runs predictions and saves a batch CSV
+### 1️⃣ Start Monitoring Stack
 
-- `calculate_metrics.py`
-  - compares the latest batch to `reference.csv`
-  - computes drift, performance, prediction shares, and average latency
-  - stores one row per batch in PostgreSQL table `monitoring_metrics`
-
-## Recommended live demo flow
-
-### 1) Prepare the reference once
 ```bash
-python scripts/prepare_reference.py --raw-path malaria_final_dataset.csv
+cd monitoring
+docker-compose up --build
 ```
 
-### 2) Generate a new batch live
+This will start:
+
+* PostgreSQL (metrics storage)
+* Grafana (visualization)
+
+---
+
+### 2️⃣ Prepare Reference Dataset
+
 ```bash
-python scripts/generate_batch.py --batch-size 20 --drift-mode mixed
+python scripts/prepare_reference.py
 ```
 
-### 3) Calculate and store the monitoring metrics live
+This creates the baseline dataset used for comparison.
+
+---
+
+### 3️⃣ Generate Batch Data
+
+```bash
+python scripts/generate_batch.py --drift-mode none --batch-size 30
+```
+
+You can simulate different conditions:
+
+* `none` → normal data
+* `drift` → shifted distribution
+
+---
+
+### 4️⃣ Calculate Metrics
+
 ```bash
 python scripts/calculate_metrics.py
 ```
 
-### 4) Refresh Adminer / Grafana
-- Adminer query:
-```sql
-SELECT * FROM monitoring_metrics ORDER BY timestamp DESC;
+This computes:
+
+* Model performance metrics
+* Drift indicators
+
+---
+
+## 📊 Metrics Tracked
+
+### Model Performance
+
+* Accuracy
+* Precision
+* Recall
+
+### Data Monitoring
+
+* Feature distribution changes
+* Drift detection indicators
+
+---
+
+## 📈 Visualization (Grafana)
+
+Access Grafana at:
+
+```
+http://localhost:3000
 ```
 
-## Suggested Grafana panels
+Default credentials:
 
-### Total processed batches
-```sql
-SELECT COUNT(*) AS total_batches
-FROM monitoring_metrics;
+```
+admin / admin
 ```
 
-### Accuracy over time
-```sql
-SELECT timestamp AS "time", accuracy
-FROM monitoring_metrics
-ORDER BY timestamp;
-```
+Dashboards show:
 
-### Share of drifted features over time
-```sql
-SELECT timestamp AS "time", share_drifted_features
-FROM monitoring_metrics
-ORDER BY timestamp;
-```
+* Performance trends over time
+* Drift signals
+* Batch-level monitoring insights
 
-### High-risk prediction share over time
-```sql
-SELECT timestamp AS "time", pred_high_risk_share
-FROM monitoring_metrics
-ORDER BY timestamp;
-```
+---
 
-### Average latency over time
-```sql
-SELECT timestamp AS "time", avg_latency_ms
-FROM monitoring_metrics
-ORDER BY timestamp;
-```
+## 🔁 Monitoring Workflow
 
-## Important note for your presentation
-This monitoring demo is a historical backtesting setup:
-- the production-like batch uses later historical years
-- true labels are available from next year's incidence
-- this lets you show `generate_batch` and `calculate_metrics` live
-- in a real production system, ground-truth labels would usually arrive later
+1. Generate new batch data
+2. Run predictions
+3. Calculate metrics
+4. Store results in database
+5. Visualize in Grafana
+6. Trigger retraining if degradation detected
+
+---
+
+## 🚀 Future Improvements
+
+* Add automated drift thresholds
+* Integrate alerting (email/Slack)
+* Use Evidently AI for advanced monitoring
+* Automate pipeline with Prefect
+
+---
+
+## 🎯 Key Takeaways
+
+This monitoring system demonstrates:
+
+* End-to-end MLOps lifecycle
+* Production-level model observability
+* Practical handling of data drift and performance decay

@@ -1,0 +1,61 @@
+name: CI/CD for Malaria Outbreak Prediction
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  ci:
+    name: Continuous Integration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run tests
+        run: |
+          pytest dockerisation_and_deployment/webservices/test_prediction_core.py
+
+  cd:
+    name: Build and Push Docker image
+    runs-on: ubuntu-latest
+    needs: ci
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ghcr.io/lamiorkor/malaria_outbreak_prediction/malaria-predict-service:latest \
+            -f dockerisation_and_deployment/webservices/Dockerfile .
+
+      - name: Push Docker image
+        run: |
+          docker push ghcr.io/lamiorkor/malaria_outbreak_prediction/malaria-predict-service:latest
