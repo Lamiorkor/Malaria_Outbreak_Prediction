@@ -1,61 +1,164 @@
-name: CI/CD for Malaria Outbreak Prediction
+# ──────────────────────────────────────────────────────────────────────────────
+# CI/CD Pipeline – Malaria Outbreak Prediction
+#
+# Trigger model:
+#   * push to main / develop  → run tests, build (and push) image
+#   * pull_request to main    → run tests only  (gatekeeper)
+#   * workflow_dispatch       → manual run from the GitHub UI
+#
+# Pipeline stages (matching the SW10 slides):
+#     Push  →  Run (CI: pytest)  →  Build (CD: Docker)  →  Push (GHCR)
+# ──────────────────────────────────────────────────────────────────────────────
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
-permissions:
-  contents: read
-  packages: write
+# Environment variables shared by every job
+env:
+  PYTHON_VERSION: "3.11"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/malaria-api   # → ghcr.io/<owner>/<repo>/malaria-api
+
+# Cancel duplicate runs on the same branch (saves CI minutes)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 
 jobs:
-  ci:
-    name: Continuous Integration
+  # ──────────────────────────────────────────────────────────────────────────
+  # CI JOB — runs on a clean Ubuntu VM and proves the code is healthy
+  # ──────────────────────────────────────────────────────────────────────────
+  test:
+    name: CI – Lint & Unit Tests
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Pull the repository contents onto the runner
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      # Step 2: Install Python (clean environment — no leftover packages)
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
 
+      # Step 3: Install project + test dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest
+          pip install -r requirements-dev.txt
 
-      - name: Run tests
+      # Step 4: Static check – fail fast if Python won't even parse
+      - name: Syntax check
         run: |
-          pytest dockerisation_and_deployment/webservices/test_prediction_core.py
+          python -m compileall -q training_pipeline dockerisation_and_deployment
 
-  cd:
-    name: Build and Push Docker image
+      # Step 5: Run the unit tests (the CI gate)
+      - name: Run pytest
+        run: |
+          pytest -v --tb=short --maxfail=1
+
+      # Step 6: Upload pytest report as artifact for inspection
+      - name: Upload test report
+        if: always()                       # also runs on failure
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report
+          path: |
+            .pytest_cache/
+          retention-days: 7
+
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # CD JOB — builds and (conditionally) publishes the Docker image
+  # ──────────────────────────────────────────────────────────────────────────
+  build-and-push:
+    name: CD – Build & Push Docker Image
+    needs: test                                       # never run if CI fails
     runs-on: ubuntu-latest
-    needs: ci
+
+    # Only push images for pushes to main; PRs only build locally to verify
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
+      # Lower-case the image name (GHCR requires lower-case repository paths)
+      - name: Normalise image name
+        id: img
+        run: echo "name=${IMAGE_NAME,,}" >> "$GITHUB_OUTPUT"
+
+      # Buildx gives layer caching and multi-arch support
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Authenticate with GHCR using the auto-provided GITHUB_TOKEN
       - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push'
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker image
-        run: |
-          docker build \
-            -t ghcr.io/lamiorkor/malaria_outbreak_prediction/malaria-predict-service:latest \
-            -f dockerisation_and_deployment/webservices/Dockerfile .
+      # Compute meaningful tags: branch name, commit SHA, "latest" on main
+      - name: Compute image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.img.outputs.name }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Push Docker image
+      # The actual build. Pushes only on direct pushes (not on PRs from forks).
+      - name: Build (and push if main) Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: dockerisation_and_deployment/webservices/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Smoke test: start the container locally and check the /health endpoint
+      - name: Smoke-test the image
+        if: github.event_name == 'push'
         run: |
-          docker push ghcr.io/lamiorkor/malaria_outbreak_prediction/malaria-predict-service:latest
+          IMAGE="${{ env.REGISTRY }}/${{ steps.img.outputs.name }}:latest"
+          docker pull "$IMAGE"
+          docker run -d --rm --name malaria-api -p 8000:8000 \
+            -e DISABLE_DB_LOGGING=true \
+            "$IMAGE"
+          # wait for FastAPI lifespan (model load) to finish
+          for i in {1..15}; do
+            if curl -fsS http://localhost:8000/ >/dev/null; then
+              echo "✓ Container is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "✗ Container failed to become healthy"
+          docker logs malaria-api
+          exit 1
+
+      - name: Stop smoke-test container
+        if: always() && github.event_name == 'push'
+        run: docker stop malaria-api || true

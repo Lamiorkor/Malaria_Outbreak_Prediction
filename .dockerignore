@@ -1,0 +1,58 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# .dockerignore — keep the build context small and reproducible.
+#
+# Anything listed here is NOT sent to the Docker daemon, which means:
+#   * faster builds       (no 4-MB mlruns/ folder copied for nothing)
+#   * smaller images      (no notebooks, no caches)
+#   * better caching      (the build context hash changes less often)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Python build / cache artefacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter notebooks & checkpoints (do not belong in the production image)
+*.ipynb
+.ipynb_checkpoints/
+
+# MLflow tracking data — the container talks to MLflow over the network,
+# it should NEVER carry mlruns/ inside the image
+mlruns/
+mlflow.db
+
+# Monitoring stack (separate compose project — not part of the API image)
+monitoring/
+
+# Training data (raw + feature store) — too large; the container only needs
+# the trained model and scaler that live under models/
+data/
+
+# Outputs from previous batch runs
+outputs/
+
+# Git / IDE / OS noise
+.git/
+.gitignore
+.github/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local secrets that must NEVER reach a container layer
+.env
+.env.*
+*.key
+*.pem
