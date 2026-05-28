@@ -11,9 +11,9 @@ import pytest
 from prediction_core import predict, validate_input, EXPECTED_FEATURE_COUNT
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Dummy models – replace the real LogisticRegression in CI (Slide 11)
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────
+# Dummy models that replace the real LogisticRegression in CI 
+# ────────────────────────────────────────────────────────────
 class DummyModel:
     """Stand-in for sklearn LogisticRegression; always predicts 0 (no outbreak)."""
     def predict(self, X):

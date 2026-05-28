@@ -1,8 +1,6 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # docker-compose.yml — local deployment of the malaria stack.
 #
-# This file is the "Final Architecture" slide turned into runnable infra:
-#
 #       GitHub  →  CI  →  CD  →  Registry
 #                                   │
 #                       ┌───────────┼────────────┐
