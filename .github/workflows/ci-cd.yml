@@ -69,14 +69,24 @@ jobs:
           pytest -v --tb=short --maxfail=1
 
       # Step 6: Upload pytest report as artifact for inspection
+      # - name: Upload test report
+      #   if: always()                       # also runs on failure
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: pytest-report
+      #     path: |
+      #       .pytest_cache/
+      #     retention-days: 7
+
+      - name: Run pytest
+        run: pytest -v --junitxml=pytest-report.xml
+
       - name: Upload test report
-        if: always()                       # also runs on failure
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pytest-report
-          path: |
-            .pytest_cache/
-          retention-days: 7
+          path: pytest-report.xml
 
 
   # ──────────────────────────────────────────────────────────────────────────
