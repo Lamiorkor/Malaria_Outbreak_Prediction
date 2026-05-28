@@ -1,13 +1,6 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # CI/CD Pipeline – Malaria Outbreak Prediction
 #
-# Trigger model:
-#   * push to main / develop  → run tests, build (and push) image
-#   * pull_request to main    → run tests only  (gatekeeper)
-#   * workflow_dispatch       → manual run from the GitHub UI
-#
-# Pipeline stages (matching the SW10 slides):
-#     Push  →  Run (CI: pytest)  →  Build (CD: Docker)  →  Push (GHCR)
 # ──────────────────────────────────────────────────────────────────────────────
 name: CI/CD Pipeline
 
